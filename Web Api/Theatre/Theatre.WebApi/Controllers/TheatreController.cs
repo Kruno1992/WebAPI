@@ -5,76 +5,182 @@ using System.Media;
 using System.Web;
 using System.Web.Http;
 using System.Web.Mvc;
+using System.Net.Http;
+using RouteAttribute = System.Web.Http.RouteAttribute;
+using HttpPostAttribute = System.Web.Http.HttpPostAttribute;
+using System.Net;
+using System.Data.SqlClient;
 
 namespace Theatre.WebApi.Controllers
 {
-    public class TheatreTickets
+    public class Personnel
     {
-        public int Id;
-        public string Name { get; set; }
+        public Guid Id { get; set; }
+        public string PersonnelName { get; set; }
         public string Surname { get; set; }
-        public int BoughtNumber { get; set; }
-        public int SpentMoney { get; set; }
-
-
+        public string Position { get; set; }
+        public int HoursOfWork { get; set; }
+        public string PositionAndHours { get; set; }
     }
-    public class TheatreController : ApiController
+
+    public class PersonnelController : ApiController
     {
-        public List<TheatreTickets> Customers = new List<TheatreTickets>
-        {
-            new TheatreTickets { Id = 1, Name = "Ivan", Surname = "Ivic", BoughtNumber = 5, SpentMoney = 50 },
-            new TheatreTickets { Id = 2, Name = "Josip", Surname = "Josic", BoughtNumber = 6, SpentMoney = 60 },
-            new TheatreTickets { Id = 3, Name = "Luka", Surname = "Vucemilovic", BoughtNumber = 7, SpentMoney = 70 },
-            new TheatreTickets { Id = 4, Name = "Krunoslav", Surname = "Skoro", BoughtNumber = 2, SpentMoney = 10 },
-            new TheatreTickets { Id = 5, Name = "Jusuf", Surname = "Begovic", BoughtNumber = 3, SpentMoney = 30 }
-        };
+        public static string connectionString = "Data Source=DESKTOP-6E381JI;Initial Catalog=ProdajaKarataKazalište;Integrated Security=True";
 
+        // GET api/Theatre
 
-        // GET api/values
-        public IEnumerable<TheatreTickets> Get()
+        public HttpResponseMessage Get()
         {
-            return Customers;
-        }
-
-        // GET api/Theatre/Number Desired
-        public TheatreTickets Get(int id)
-        {
-            return Customers.FirstOrDefault(x => x.Id == id);
-        }
-
-        // POST api/values
-        public void Post([FromBody] string value)
-        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            using (connection)
             {
-                // Generate a new ID for the customer by finding the maximum ID in the list and adding 1
-                int newId = Customers.Max(x => x.Id) + 1;
+                SqlCommand command = new SqlCommand("SELECT * FROM Personnel;", connection);
+                connection.Open();
+                SqlDataReader reader = command.ExecuteReader();
 
-                // Set the ID property of the new customer
-                customer.Id = newId;
+                List<Personnel> worker = new List<Personnel>();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        Personnel personnel = new Personnel
+                        {
+                            PositionAndHours = $"{reader.GetString(3)}{reader.GetInt32(4)}",
+                            Id = reader.GetGuid(0),
+                            PersonnelName = reader.GetString(1),
+                            Surname = reader.GetString(2),
+                            Position = reader.GetString(3),
+                            HoursOfWork = reader.GetInt32(4)
+                        };
 
-                // Add the new customer to the list
-                Customers.Add(customer);
+                        worker.Add(personnel);
+                    }
+                    reader.Close();
+                    return Request.CreateResponse(HttpStatusCode.OK, worker);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "Details Have Not Been Found! Try again!");
+                }
+            }
+        }
+
+        //GET api/Theatre/Begovic
+        public HttpResponseMessage Get(string Surname)
+        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            using (connection)
+            {
+                SqlCommand cmd = new SqlCommand("SELECT * FROM Personnel WHERE Surname=@surname;", connection);
+                cmd.Parameters.AddWithValue("@surname", Surname);
+                connection.Open();
+
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                Personnel personnel = new Personnel();
+
+                if (reader.HasRows)
+                {
+                    reader.Read();
+                    personnel.PositionAndHours = $"{reader.GetString(3)}{reader.GetInt32(4)}";
+                    personnel.Id = reader.GetGuid(0);
+                    personnel.PersonnelName = reader.GetString(1);
+                    personnel.Surname = reader.GetString(2);
+                    personnel.Position = reader.GetString(3);
+                    personnel.HoursOfWork = reader.GetInt32(4);
+
+                    reader.Close();
+                    return Request.CreateResponse(HttpStatusCode.OK, personnel);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "Try again! Personnel has not been found!");
+                }
+            }
+        }
+
+        // POST api/Theatre
+        public HttpResponseMessage Post([FromBody] Personnel personnel)
+        {
+            SqlConnection conn = new SqlConnection(connectionString);
+            using (conn)
+            {
+                SqlCommand command = new SqlCommand("INSERT INTO Personnel (Id, PersonnelName, Surname, Position, HoursOfWork)" +
+                               " VALUES (@Id, @personnelname, @surname, @position, @hoursofwork)", conn);
+                personnel.Id = Guid.NewGuid();
+                command.Parameters.AddWithValue("@id", personnel.Id);
+                command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
+                command.Parameters.AddWithValue("@surname", personnel.Surname);
+                command.Parameters.AddWithValue("@position", personnel.Position);
+                command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
+
+
+                conn.Open();
+
+                int RowsAffected = command.ExecuteNonQuery();
+                if (RowsAffected >= 0)
+                {
+                    return Request.CreateResponse(HttpStatusCode.Created, personnel);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, personnel, "Try again!");
+                }
             }
         }
 
         // PUT api/Theatre/5
-        public void Put(int id, [FromBody] TheatreTickets customer)
+        public HttpResponseMessage Put(Guid id, [FromBody] Personnel personnel)
         {
-            int index = Customers.FindIndex(x => x.Id == id);
-            if (index >= 0)
+            using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                Customers[index] = customer;
+                connection.Open();
+                using (SqlCommand command = connection.CreateCommand())
+                {
+                    command.CommandText = "UPDATE Personnel SET PersonnelName=@personnelname, Surname=@surname, Position=@position, HoursOfWork=@hoursofwork WHERE Id=@id";
+                    command.Parameters.AddWithValue("@id", id);
+                    command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
+                    command.Parameters.AddWithValue("@surname", personnel.Surname);
+                    command.Parameters.AddWithValue("@position", personnel.Position);
+                    command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
+
+                    int rowsAffected = command.ExecuteNonQuery();
+                    if (rowsAffected > 0)
+                    {
+                        return Request.CreateResponse(HttpStatusCode.OK, "Successfully updated");
+                    }
+                    else
+                    {
+                        return Request.CreateResponse(HttpStatusCode.NotFound, "zugjhgjhgjhg");
+                    }
+                }
+                
+            }
+        }
+        // DELETE api/Theatre/5
+        public HttpResponseMessage Delete(Guid id)
+        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            using (connection)
+            {
+                SqlCommand command = new SqlCommand("DELETE FROM Personnel WHERE Id=@Id", connection);
+
+                command.Parameters.AddWithValue("@Id", id);
+                connection.Open();
+
+                int rowsAffected = command.ExecuteNonQuery();
+                if (rowsAffected > 0)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, $"Personnel with Id {id} has been deleted.");
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, $"Personnel with Id {id} has not been found.");
+                }
             }
         }
 
-        // DELETE api/values/5
-        public void Delete(int id)
-        {
-            TheatreTickets customerToRemove = Customers.FirstOrDefault(x => x.Id == id);
-            if (customerToRemove != null)
-            {
-                Customers.Remove(customerToRemove);
-            }
-        }
     }
 }
+
+
