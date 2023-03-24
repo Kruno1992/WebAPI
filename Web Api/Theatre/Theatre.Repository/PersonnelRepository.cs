@@ -1,35 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Media;
-using System.Web;
-using System.Web.Http;
-using System.Web.Mvc;
-using System.Net.Http;
-using RouteAttribute = System.Web.Http.RouteAttribute;
-using HttpPostAttribute = System.Web.Http.HttpPostAttribute;
-using System.Net;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using Theatre.Model;
+using Theatre.Repository.Common;
 
-namespace Theatre.WebApi.Controllers
+namespace Theatre.Repository
 {
-    public class Personnel
-    {
-        public Guid Id { get; set; }
-        public string PersonnelName { get; set; }
-        public string Surname { get; set; }
-        public string Position { get; set; }
-        public int HoursOfWork { get; set; }
-        public string PositionAndHours { get; set; }
-    }
-
-    public class PersonnelController : ApiController
+    public class PersonnelRepository : IPersonnelRepository
     {
         public static string connectionString = "Data Source=DESKTOP-6E381JI;Initial Catalog=ProdajaKarataKazalište;Integrated Security=True";
 
-        // GET api/Theatre
-
-        public HttpResponseMessage Get()
+        public List<Personnel> GetAllPersonnel()
         {
             SqlConnection connection = new SqlConnection(connectionString);
             using (connection)
@@ -45,28 +30,24 @@ namespace Theatre.WebApi.Controllers
                     {
                         Personnel personnel = new Personnel
                         {
-                            PositionAndHours = $"{reader.GetString(3)}{reader.GetInt32(4)}",
                             Id = reader.GetGuid(0),
                             PersonnelName = reader.GetString(1),
                             Surname = reader.GetString(2),
                             Position = reader.GetString(3),
                             HoursOfWork = reader.GetInt32(4)
                         };
-
                         worker.Add(personnel);
                     }
                     reader.Close();
-                    return Request.CreateResponse(HttpStatusCode.OK, worker);
+                    return worker;
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound, "Details Have Not Been Found! Try again!");
+                    return null;
                 }
             }
         }
-
-        //GET api/Theatre/Begovic
-        public HttpResponseMessage Get(string surname)
+        public List<Personnel> GetPersonnel(string surname)
         {
             SqlConnection connection = new SqlConnection(connectionString);
             using (connection)
@@ -77,30 +58,31 @@ namespace Theatre.WebApi.Controllers
 
                 SqlDataReader reader = cmd.ExecuteReader();
 
-                Personnel personnel = new Personnel();
+                List<Personnel> workers = new List<Personnel>();
 
                 if (reader.HasRows)
                 {
                     reader.Read();
-                    personnel.PositionAndHours = $"{reader.GetString(3)}{reader.GetInt32(4)}";
+                    Personnel personnel = new Personnel();
+
                     personnel.Id = reader.GetGuid(0);
                     personnel.PersonnelName = reader.GetString(1);
                     personnel.Surname = reader.GetString(2);
                     personnel.Position = reader.GetString(3);
                     personnel.HoursOfWork = reader.GetInt32(4);
 
+                    workers.Add(personnel);
+
                     reader.Close();
-                    return Request.CreateResponse(HttpStatusCode.OK, personnel);
+                    return workers;
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound, "Try again! Personnel has not been found!");
+                    return null;
                 }
             }
         }
-
-        // POST api/Theatre
-        public HttpResponseMessage Post([FromBody] Personnel personnel)
+        public bool AddPersonnel(Personnel personnel)
         {
             SqlConnection connection = new SqlConnection(connectionString);
             using (connection)
@@ -120,17 +102,15 @@ namespace Theatre.WebApi.Controllers
                 int RowsAffected = command.ExecuteNonQuery();
                 if (RowsAffected >= 0)
                 {
-                    return Request.CreateResponse(HttpStatusCode.Created, personnel);
+                    return true;
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, personnel, "Try again!");
+                    return false;
                 }
             }
         }
-
-        // PUT api/Theatre/5
-        public HttpResponseMessage Put(Guid id, [FromBody] Personnel personnel)
+        public bool EditPersonnel(Guid id, Personnel personnel)
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
@@ -147,18 +127,16 @@ namespace Theatre.WebApi.Controllers
                     int rowsAffected = command.ExecuteNonQuery();
                     if (rowsAffected > 0)
                     {
-                        return Request.CreateResponse(HttpStatusCode.OK, "Successfully updated");
+                        return true;
                     }
                     else
                     {
-                        return Request.CreateResponse(HttpStatusCode.NotFound, "Update Failed, Try Again!");
+                        return false;
                     }
                 }
-                
             }
         }
-        // DELETE api/Theatre/5
-        public HttpResponseMessage Delete(Guid id)
+        public bool DeletePersonnel(Guid id)
         {
             SqlConnection connection = new SqlConnection(connectionString);
             using (connection)
@@ -171,16 +149,13 @@ namespace Theatre.WebApi.Controllers
                 int rowsAffected = command.ExecuteNonQuery();
                 if (rowsAffected > 0)
                 {
-                    return Request.CreateResponse(HttpStatusCode.OK, $"Personnel with Id {id} has been deleted.");
+                    return true;
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound, $"Personnel with Id {id} has not been found.");
+                    return false;
                 }
             }
         }
-
     }
 }
-
-

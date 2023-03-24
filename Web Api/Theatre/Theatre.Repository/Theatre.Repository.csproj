@@ -41,9 +41,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
-    <Compile Include="IPersonnelRepository.cs" />
+    <Compile Include="PersonnelRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Theatre.Model\Theatre.Model.csproj">
+      <Project>{869AC5C8-03EF-4FE4-BDB3-D80CA775816D}</Project>
+      <Name>Theatre.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Theatre.Repository.Common\Theatre.Repository.Common.csproj">
+      <Project>{B01CE058-4F42-4BBE-B6CA-58A550870052}</Project>
+      <Name>Theatre.Repository.Common</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
