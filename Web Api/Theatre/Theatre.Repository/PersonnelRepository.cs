@@ -14,117 +14,145 @@ namespace Theatre.Repository
     {
         public static string connectionString = "Data Source=DESKTOP-6E381JI;Initial Catalog=ProdajaKarataKazalište;Integrated Security=True";
 
-        public List<Personnel> GetAllPersonnel()
+        public async Task<List<Personnel>> GetAllPersonnelAsync()
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            try
             {
-                SqlCommand command = new SqlCommand("SELECT * FROM Personnel;", connection);
-                connection.Open();
-                SqlDataReader reader = command.ExecuteReader();
-
-                List<Personnel> worker = new List<Personnel>();
-                if (reader.HasRows)
                 {
-                    while (reader.Read())
+                    SqlConnection connection = new SqlConnection(connectionString);
+                    using (connection)
                     {
-                        Personnel personnel = new Personnel
+                        SqlCommand command = new SqlCommand("SELECT * FROM Personnel;", connection);
+                        connection.Open();
+                        SqlDataReader reader = await command.ExecuteReaderAsync();
+
+                        List<Personnel> worker = new List<Personnel>();
+                        if (reader.HasRows)
                         {
-                            Id = reader.GetGuid(0),
-                            PersonnelName = reader.GetString(1),
-                            Surname = reader.GetString(2),
-                            Position = reader.GetString(3),
-                            HoursOfWork = reader.GetInt32(4)
-                        };
-                        worker.Add(personnel);
+                            while (reader.Read())
+                            {
+                                Personnel personnel = new Personnel
+                                {
+                                    Id = reader.GetGuid(0),
+                                    PersonnelName = reader.GetString(1),
+                                    Surname = reader.GetString(2),
+                                    Position = reader.GetString(3),
+                                    HoursOfWork = reader.GetInt32(4)
+                                };
+                                worker.Add(personnel);
+                            }
+                            reader.Close();
+                            return worker;
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
-                    reader.Close();
-                    return worker;
                 }
-                else
-                {
-                    return null;
-                }
+
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
-        public List<Personnel> GetPersonnel(string surname)
+        public async Task<List<Personnel>> GetPersonnelAsync(Guid id)
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            try
             {
-                SqlCommand cmd = new SqlCommand("SELECT * FROM Personnel WHERE Surname=@surname;", connection);
-                cmd.Parameters.AddWithValue("@surname", surname);
-                connection.Open();
-
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                List<Personnel> workers = new List<Personnel>();
-
-                if (reader.HasRows)
+                SqlConnection connection = new SqlConnection(connectionString);
+                using (connection)
                 {
-                    reader.Read();
-                    Personnel personnel = new Personnel();
+                    SqlCommand cmd = new SqlCommand("SELECT * FROM Personnel WHERE Id=@Id;", connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    connection.Open();
 
-                    personnel.Id = reader.GetGuid(0);
-                    personnel.PersonnelName = reader.GetString(1);
-                    personnel.Surname = reader.GetString(2);
-                    personnel.Position = reader.GetString(3);
-                    personnel.HoursOfWork = reader.GetInt32(4);
+                    SqlDataReader reader = await cmd.ExecuteReaderAsync();
 
-                    workers.Add(personnel);
+                    List<Personnel> workers = new List<Personnel>();
 
-                    reader.Close();
-                    return workers;
-                }
-                else
-                {
-                    return null;
+                    if (reader.HasRows)
+                    {
+                        reader.Read();
+                        Personnel personnel = new Personnel();
+
+                        personnel.Id = reader.GetGuid(0);
+                        personnel.PersonnelName = reader.GetString(1);
+                        personnel.Surname = reader.GetString(2);
+                        personnel.Position = reader.GetString(3);
+                        personnel.HoursOfWork = reader.GetInt32(4);
+
+                        workers.Add(personnel);
+
+                        reader.Close();
+                        return workers;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+
                 }
             }
-        }
-        public bool AddPersonnel(Personnel personnel)
-        {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            catch (Exception)
             {
-                SqlCommand command = new SqlCommand("INSERT INTO Personnel (Id, PersonnelName, Surname, Position, HoursOfWork)" +
-                               " VALUES (@Id, @personnelname, @surname, @position, @hoursofwork)", connection);
-                personnel.Id = Guid.NewGuid();
-                command.Parameters.AddWithValue("@id", personnel.Id);
-                command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
-                command.Parameters.AddWithValue("@surname", personnel.Surname);
-                command.Parameters.AddWithValue("@position", personnel.Position);
-                command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
-
-
-                connection.Open();
-
-                int RowsAffected = command.ExecuteNonQuery();
-                if (RowsAffected >= 0)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+                return null;
             }
         }
-        public bool EditPersonnel(Guid id, Personnel personnel)
+        public async Task<bool> AddPersonnelAsync(Personnel personnel)
         {
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            try
             {
-                connection.Open();
-                using (SqlCommand command = connection.CreateCommand())
+                SqlConnection connection = new SqlConnection(connectionString);
+                using (connection)
                 {
-                    command.CommandText = "UPDATE Personnel SET PersonnelName=@personnelname, Surname=@surname, Position=@position, HoursOfWork=@hoursofwork WHERE Id=@id";
+                    SqlCommand command = new SqlCommand("INSERT INTO Personnel (Id, PersonnelName, Surname, Position, HoursOfWork)" +
+                                   " VALUES (@Id, @personnelname, @surname, @position, @hoursofwork)", connection);
+                    personnel.Id = Guid.NewGuid();
+                    command.Parameters.AddWithValue("@id", personnel.Id);
+                    command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
+                    command.Parameters.AddWithValue("@surname", personnel.Surname);
+                    command.Parameters.AddWithValue("@position", personnel.Position);
+                    command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
+
+
+                    connection.Open();
+
+                    int RowsAffected = await command.ExecuteNonQueryAsync();
+                    if (RowsAffected >= 0)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public async Task<bool> EditPersonnelAsync(Guid id, Personnel personnel)
+        {
+            try
+            {
+                SqlConnection connection = new SqlConnection(connectionString);
+                using (connection)
+                {
+
+                    SqlCommand command = new SqlCommand("UPDATE Personnel SET PersonnelName=@personnelname, Surname=@surname, Position=@position, HoursOfWork=@hoursofwork WHERE Id=@id", connection);
                     command.Parameters.AddWithValue("@id", id);
                     command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
                     command.Parameters.AddWithValue("@surname", personnel.Surname);
                     command.Parameters.AddWithValue("@position", personnel.Position);
                     command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
 
-                    int rowsAffected = command.ExecuteNonQuery();
+                    connection.Open();
+                    int rowsAffected = await command.ExecuteNonQueryAsync();
                     if (rowsAffected > 0)
                     {
                         return true;
@@ -135,26 +163,38 @@ namespace Theatre.Repository
                     }
                 }
             }
-        }
-        public bool DeletePersonnel(Guid id)
-        {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            catch (Exception)
             {
-                SqlCommand command = new SqlCommand("DELETE FROM Personnel WHERE Id=@Id", connection);
-
-                command.Parameters.AddWithValue("@Id", id);
-                connection.Open();
-
-                int rowsAffected = command.ExecuteNonQuery();
-                if (rowsAffected > 0)
+                return false;
+            }
+        }
+        public async Task<bool> DeletePersonnelAsync(Guid id)
+        {
+            try
+            {
+                SqlConnection connection = new SqlConnection(connectionString);
+                using (connection)
                 {
-                    return true;
+                    SqlCommand command = new SqlCommand("DELETE FROM Personnel WHERE Id=@Id", connection);
+
+                    command.Parameters.AddWithValue("@id", id);
+                    connection.Open();
+
+                    int numberOfAffectedRows = await command.ExecuteNonQueryAsync();
+                    if (numberOfAffectedRows > 0)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
-                else
-                {
-                    return false;
-                }
+
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
     }

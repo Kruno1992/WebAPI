@@ -1,175 +1,102 @@
-﻿using System;
+﻿using Microsoft.Ajax.Utilities;
+using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
-using System.Media;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-using System.Web.Mvc;
-using System.Net.Http;
-using RouteAttribute = System.Web.Http.RouteAttribute;
-using HttpPostAttribute = System.Web.Http.HttpPostAttribute;
-using System.Net;
-using System.Data.SqlClient;
+using System.Web.Http.Description;
+using System.Web.UI.WebControls;
+using Theatre.Service.Common;
+using Theatre.Service;
+using Theatre.Repository;
+using Theatre.Model;
 
 namespace Theatre.WebApi.Controllers
 {
-    public class Personnel
-    {
-        public Guid Id { get; set; }
-        public string PersonnelName { get; set; }
-        public string Surname { get; set; }
-        public string Position { get; set; }
-        public int HoursOfWork { get; set; }
-        public string PositionAndHours { get; set; }
-    }
-
     public class PersonnelController : ApiController
     {
-        public static string connectionString = "Data Source=DESKTOP-6E381JI;Initial Catalog=ProdajaKarataKazalište;Integrated Security=True";
+        protected IPersonnelService PersonnelService { get; set; }
 
-        // GET api/Theatre
-
-        public HttpResponseMessage Get()
+        public PersonnelController(IPersonnelService personnelService)
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            PersonnelService = personnelService;
+        }
+
+        [HttpGet]
+        public async Task<HttpResponseMessage> GetAllPersonnelAsync()
+        {
+            var worker = await PersonnelService.GetAllPersonnelAsync();
+            if (worker != null)
             {
-                SqlCommand command = new SqlCommand("SELECT * FROM Personnel;", connection);
-                connection.Open();
-                SqlDataReader reader = command.ExecuteReader();
-
-                List<Personnel> worker = new List<Personnel>();
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        Personnel personnel = new Personnel
-                        {
-                            PositionAndHours = $"{reader.GetString(3)}{reader.GetInt32(4)}",
-                            Id = reader.GetGuid(0),
-                            PersonnelName = reader.GetString(1),
-                            Surname = reader.GetString(2),
-                            Position = reader.GetString(3),
-                            HoursOfWork = reader.GetInt32(4)
-                        };
-
-                        worker.Add(personnel);
-                    }
-                    reader.Close();
-                    return Request.CreateResponse(HttpStatusCode.OK, worker);
-                }
-                else
-                {
-                    return Request.CreateResponse(HttpStatusCode.NotFound, "Details Have Not Been Found! Try again!");
-                }
+                return Request.CreateResponse(HttpStatusCode.OK, worker);
+            }
+            else
+            {
+                return Request.CreateResponse(HttpStatusCode.NotFound, "Details Have Not Been Found! Try again!");
             }
         }
 
-        //GET api/Theatre/Begovic
-        public HttpResponseMessage Get(string surname)
+        [HttpGet]
+        public async Task<HttpResponseMessage> GetPersonnelAsync(Guid id)
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            var personnel = await PersonnelService.GetPersonnelAsync(id);
+            if (personnel != null)
             {
-                SqlCommand cmd = new SqlCommand("SELECT * FROM Personnel WHERE Surname=@surname;", connection);
-                cmd.Parameters.AddWithValue("@surname", surname);
-                connection.Open();
-
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                Personnel personnel = new Personnel();
-
-                if (reader.HasRows)
-                {
-                    reader.Read();
-                    personnel.PositionAndHours = $"{reader.GetString(3)}{reader.GetInt32(4)}";
-                    personnel.Id = reader.GetGuid(0);
-                    personnel.PersonnelName = reader.GetString(1);
-                    personnel.Surname = reader.GetString(2);
-                    personnel.Position = reader.GetString(3);
-                    personnel.HoursOfWork = reader.GetInt32(4);
-
-                    reader.Close();
-                    return Request.CreateResponse(HttpStatusCode.OK, personnel);
-                }
-                else
-                {
-                    return Request.CreateResponse(HttpStatusCode.NotFound, "Try again! Personnel has not been found!");
-                }
+                return Request.CreateResponse(HttpStatusCode.OK, personnel);
+            }
+            else
+            {
+                return Request.CreateResponse(HttpStatusCode.NotFound, "Try again! Personnel has not been found!");
             }
         }
 
-        // POST api/Theatre
-        public HttpResponseMessage Post([FromBody] Personnel personnel)
+
+        [HttpPost]
+        public async Task<HttpResponseMessage> AddPersonnelAsync(PersonnelRest personnel)
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
+            Personnel person = new Personnel();
+            person.Id = personnel.Id;
+            person.PersonnelName = personnel.PersonnelName;
+            person.Surname = personnel.Surname;
+            person.Position = personnel.Position;
+            person.HoursOfWork = personnel.HoursOfWork;
+
+            bool newPersonnel = await PersonnelService.AddPersonnelAsync(person);
+            if (newPersonnel != false)
             {
-                SqlCommand command = new SqlCommand("INSERT INTO Personnel (Id, PersonnelName, Surname, Position, HoursOfWork)" +
-                               " VALUES (@Id, @personnelname, @surname, @position, @hoursofwork)", connection);
-                personnel.Id = Guid.NewGuid();
-                command.Parameters.AddWithValue("@id", personnel.Id);
-                command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
-                command.Parameters.AddWithValue("@surname", personnel.Surname);
-                command.Parameters.AddWithValue("@position", personnel.Position);
-                command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
+                return Request.CreateResponse(HttpStatusCode.Accepted, "Add Buyer completed.");
+            }
 
+            else
+            {
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "Try again!");
+            }
 
-                connection.Open();
+        }
+        [HttpPut]
+        public async Task<HttpResponseMessage> EditPersonnelAsync(Guid id, [FromBody] Personnel personnel)
+        {
+            bool edited = await PersonnelService.AddPersonnelAsync(personnel);
+            if (edited != false)
 
-                int RowsAffected = command.ExecuteNonQuery();
-                if (RowsAffected >= 0)
-                {
-                    return Request.CreateResponse(HttpStatusCode.Created, personnel);
-                }
-                else
-                {
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, personnel, "Try again!");
-                }
+            {
+                return Request.CreateResponse(HttpStatusCode.OK, "Successfully updated");
+            }
+            else
+                    
+            {
+                return Request.CreateResponse(HttpStatusCode.NotFound, "Update Failed, Try Again!");
             }
         }
-
-        // PUT api/Theatre/5
-        public HttpResponseMessage Put(Guid id, [FromBody] Personnel personnel)
+        [HttpDelete]
+        public async Task<HttpResponseMessage> DeletePersonnelAsync(Guid id)
         {
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-                using (SqlCommand command = connection.CreateCommand())
-                {
-                    command.CommandText = "UPDATE Personnel SET PersonnelName=@personnelname, Surname=@surname, Position=@position, HoursOfWork=@hoursofwork WHERE Id=@id";
-                    command.Parameters.AddWithValue("@id", id);
-                    command.Parameters.AddWithValue("@personnelname", personnel.PersonnelName);
-                    command.Parameters.AddWithValue("@surname", personnel.Surname);
-                    command.Parameters.AddWithValue("@position", personnel.Position);
-                    command.Parameters.AddWithValue("@hoursofwork", personnel.HoursOfWork);
-
-                    int rowsAffected = command.ExecuteNonQuery();
-                    if (rowsAffected > 0)
-                    {
-                        return Request.CreateResponse(HttpStatusCode.OK, "Successfully updated");
-                    }
-                    else
-                    {
-                        return Request.CreateResponse(HttpStatusCode.NotFound, "Update Failed, Try Again!");
-                    }
-                }
-                
-            }
-        }
-        // DELETE api/Theatre/5
-        public HttpResponseMessage Delete(Guid id)
-        {
-            SqlConnection connection = new SqlConnection(connectionString);
-            using (connection)
-            {
-                SqlCommand command = new SqlCommand("DELETE FROM Personnel WHERE Id=@Id", connection);
-
-                command.Parameters.AddWithValue("@Id", id);
-                connection.Open();
-
-                int rowsAffected = command.ExecuteNonQuery();
-                if (rowsAffected > 0)
+                bool personnel = await PersonnelService.DeletePersonnelAsync(id);
+                if (personnel != false)
                 {
                     return Request.CreateResponse(HttpStatusCode.OK, $"Personnel with Id {id} has been deleted.");
                 }
@@ -177,10 +104,6 @@ namespace Theatre.WebApi.Controllers
                 {
                     return Request.CreateResponse(HttpStatusCode.NotFound, $"Personnel with Id {id} has not been found.");
                 }
-            }
         }
-
     }
 }
-
-

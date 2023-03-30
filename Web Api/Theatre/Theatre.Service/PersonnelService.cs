@@ -6,40 +6,45 @@ using System.Text;
 using System.Threading.Tasks;
 using Theatre.Model;
 using Theatre.Repository;
+using Theatre.Repository.Common;
 using Theatre.Service.Common;
 
 namespace Theatre.Service
 {
     public class PersonnelService : IPersonnelService
     {
-        public List<Personnel> GetAllPersonnel()
+        protected IPersonnelRepository PersonnelRepository { get; set; }
+
+        public PersonnelService(IPersonnelRepository personnelRepository)
         {
-            PersonnelRepository repository = new PersonnelRepository();
-            List<Personnel> worker = repository. GetAllPersonnel();
+            PersonnelRepository = personnelRepository;
+        }
+
+        public async Task<List<Personnel>> GetAllPersonnelAsync()
+        {
+            List<Personnel> worker = await PersonnelRepository. GetAllPersonnelAsync();
             return worker;
         }
-        public List<Personnel>GetPersonnel(string surname)
+
+        public async Task<List<Personnel>>GetPersonnelAsync(Guid id)
         {
-            PersonnelRepository repository = new PersonnelRepository();
-            List<Personnel> personnel = repository. GetAllPersonnel();
+            List<Personnel> personnel = await PersonnelRepository. GetPersonnelAsync(id);
             return personnel;
         }
-        public bool AddPersonnel(Personnel personnel)
+
+        public async Task<bool> AddPersonnelAsync(Personnel personnel)
         {
-            PersonnelRepository repository = new PersonnelRepository();
-            bool newPersonnel = repository.AddPersonnel(personnel);
-            return true;
+            bool newPersonnel = await PersonnelRepository.AddPersonnelAsync(personnel);
+            return newPersonnel;
         }
-        public bool EditPersonnel(Guid id,  Personnel personnel)
+        public async Task<bool> EditPersonnelAsync(Guid id,  Personnel personnel)
         {
-            PersonnelRepository repository = new PersonnelRepository();
-            bool newPersonnel = repository.AddPersonnel(personnel);
-            return true;
+            bool edited = await PersonnelRepository.AddPersonnelAsync(personnel);
+            return edited;
         }
-        public bool DeletePersonnel(Guid id)
+        public async Task<bool> DeletePersonnelAsync(Guid id)
         {
-            PersonnelRepository repository = new PersonnelRepository();
-            bool personnel = repository.DeletePersonnel(id);
+            bool personnel = await PersonnelRepository.DeletePersonnelAsync(id);
             return true;
         }
     }

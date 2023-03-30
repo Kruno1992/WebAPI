@@ -9,12 +9,11 @@ namespace Theatre.Service.Common
 {
     public interface IPersonnelService
     {  
-      List<Personnel> GetAllPersonnel();
-      List<Personnel> GetPersonnel(string surname);
-      bool AddPersonnel(Personnel personnel);
-      bool EditPersonnel(Guid id, Personnel personnel);
-      bool DeletePersonnel(Guid id);
-        
+      Task<List<Personnel>> GetAllPersonnelAsync();
+      Task<List<Personnel>> GetPersonnelAsync(Guid id);
+      Task<bool> AddPersonnelAsync(Personnel personnel);
+      Task<bool> EditPersonnelAsync(Guid id, Personnel personnel);
+      Task<bool> DeletePersonnelAsync(Guid id);
     }
 }
 
